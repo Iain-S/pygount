@@ -68,3 +68,12 @@ class PlainTextLexer(pygments.lexer.RegexLexer):
 
     name = "Text"
     tokens = {"root": [(r"\s*\n", pygments.token.Text), (r".+\n", pygments.token.Comment.Single)]}
+
+
+class JupyterLexer(pygments.lexers.JsonLexer):
+    """
+    Jupyter notebooks are stored in JSON format.
+    """
+
+    name = "Jupyter"
+    filenames = ["*.ipynb"]
