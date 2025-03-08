@@ -88,24 +88,14 @@ class JupyterLexer(pygments.lexer.Lexer, DynamicMixin):
     Jupyter notebooks are stored in JSON format.
     """
 
-    def __init__(self):
-        self.language = None
-        super().__init__()
-
-    @property
-    def name(self) -> str:
-        """The name of the language used in the notebook."""
-        # It is an error to call this property before calling get_tokens.
-        assert self.language is not None
-        return self.language
-
     def peek(self, text) -> None:
+        """Look at the text to determine the language."""
         from pygments.lexers import get_lexer_by_name
 
         self.json_dict = json.loads(text)
         # should we do a["metadata"]["kernelspec"]["language"]?
-        self.language = "{}".format(self.json_dict["metadata"]["language_info"]["name"])
-        self.lexer = get_lexer_by_name(self.language)
+        self.lexer = get_lexer_by_name(self.json_dict["metadata"]["language_info"]["name"])
+        self.name = f"Jupyter+{self.lexer.name}"
 
     def get_tokens(self, text, unfiltered=False):
         """Use a lexer appropriate for the language of the notebook."""

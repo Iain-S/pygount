@@ -278,17 +278,31 @@ class FileAnalysisTest(TempFolderTest):
             analysis.SourceAnalysis.from_file("README.md", "test", file_handle=file_handle, encoding="chardet")
 
     def test_can_analyse_python_inside_notebook(self):
-        # test_jupyter_path = self.create_temp_file(
-        #     "some.ipynb",
-        #     [
-        #         "<!DOCTYPE html>", "{% load i18n %}", '<html lang="{{ language_code }}" />'],
-        # )
+        test_jupyter_path = self.create_temp_file(
+            "some.ipynb",
+            ["<!DOCTYPE html>", "{% load i18n %}", '<html lang="{{ language_code }}" />'],
+        )
         from pathlib import Path
 
         source_analysis = analysis.SourceAnalysis.from_file(
-            str(Path("tests/examples/notebook.ipynb")), "test", encoding="utf-8", merge_embedded_language=True
+            str(Path("tests/examples/notebook.ipynb")),
+            "test",
+            encoding="utf-8",
+            merge_embedded_language=True,
+            # test_jupyter_path, "test", encoding="utf-8", merge_embedded_language=True
         )
-        assert source_analysis.language.lower() == "python"
+        assert source_analysis.language == "Jupyter"
+        assert source_analysis.code_count == 2
+        assert source_analysis.documentation_count == 2
+
+        source_analysis = analysis.SourceAnalysis.from_file(
+            str(Path("tests/examples/notebook.ipynb")),
+            "test",
+            encoding="utf-8",
+            merge_embedded_language=False,
+            # test_jupyter_path, "test", encoding="utf-8", merge_embedded_language=True
+        )
+        assert source_analysis.language == "Jupyter+Python"
         assert source_analysis.code_count == 2
         assert source_analysis.documentation_count == 2
 
