@@ -66,7 +66,6 @@ def regexes_from(
 ) -> List[Pattern]:
     assert patterns_text is not None
 
-    result = []
     default_regexes = []
     try:
         if isinstance(patterns_text, str):
@@ -91,7 +90,7 @@ def regexes_from(
                 assert isinstance(
                     supposed_regex, _REGEX_TYPE
                 ), f"patterns_text must a text or sequence or regular expressions but contains: {supposed_regex}"
-            result.extend(regexes)
+            result = regexes
     except re.error as error:
         raise OptionError(f"cannot parse pattern for regular repression: {error}", source) from None
     result.extend(default_regexes)

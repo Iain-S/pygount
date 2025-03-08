@@ -12,10 +12,11 @@ import itertools
 import logging
 import os
 import re
+from collections.abc import Generator
 from dataclasses import dataclass
 from enum import Enum
-from io import SEEK_CUR, BufferedIOBase, IOBase, RawIOBase, TextIOBase
-from typing import Iterator, List, Optional, Pattern, Sequence, Set, Tuple, Union
+from io import SEEK_CUR, BufferedIOBase, IOBase, RawIOBase
+from typing import Iterator, List, Optional, Pattern, Sequence, Set, Tuple, TypeAlias, Union
 
 import pygments.lexer
 import pygments.lexers
@@ -32,9 +33,9 @@ GIT_REPO_REGEX = re.compile(r"^(https?://|git@)")
 
 # Attempt to import chardet.
 try:
-    import chardet.universaldetector
+    from chardet.universaldetector import UniversalDetector
 
-    _detector = chardet.universaldetector.UniversalDetector()
+    _detector: Optional[UniversalDetector] = UniversalDetector()
 except ImportError:
     _detector = None
 has_chardet = bool(_detector)
@@ -49,7 +50,7 @@ DEFAULT_FOLDER_PATTERNS_TO_SKIP_TEXT = ", ".join(
 
 
 #: Pygments token type; we need to define our own type because pygments' ``_TokenType`` is internal.
-TokenType = type(pygments.token.Token)
+TokenType: TypeAlias = type(pygments.token.Token)
 
 _BASE_LANGUAGE_REGEX = re.compile(r"^(?P<base_language>[^+]+)\+[^+].*$")
 
@@ -307,7 +308,6 @@ class SourceAnalysis:
 
         result = None
         lexer = None
-        source_code = None
         if file_handle is None:
             source_size = os.path.getsize(source_path)
             if source_size == 0:
@@ -331,7 +331,7 @@ class SourceAnalysis:
                         encoding = encoding_for(source_path, encoding, fallback_encoding)
                     with open(source_path, encoding=encoding) as source_file:
                         source_code = source_file.read()
-                elif not isinstance(file_handle, TextIOBase):
+                elif isinstance(file_handle, (RawIOBase, BufferedIOBase)):
                     if encoding in ("automatic", "chardet"):
                         encoding = encoding_for(source_path, encoding, fallback_encoding, file_handle=file_handle)
                     source_code = file_handle.read().decode(encoding)
@@ -339,7 +339,7 @@ class SourceAnalysis:
                     source_code = file_handle.read()
             except (LookupError, OSError, UnicodeError) as error:
                 _log.warning("cannot read %s using encoding %s: %s", source_path, encoding, error)
-                result = SourceAnalysis.from_state(source_path, group, SourceState.error, error)
+                result = SourceAnalysis.from_state(source_path, group, SourceState.error, str(error))
             if result is None:
                 lexer = guess_lexer(source_path, source_code)
                 assert lexer is not None
@@ -568,7 +568,7 @@ class SourceScanner:
         regexps_to_skip = self._folder_regexps_to_skip if is_folder else self._name_regexps_to_skip
         return any(path_name_to_skip_regex.match(name) is not None for path_name_to_skip_regex in regexps_to_skip)
 
-    def _paths_and_group_to_analyze_in(self, folder, group, tmp_dir) -> PathData:
+    def _paths_and_group_to_analyze_in(self, folder, group, tmp_dir) -> Generator[PathData, None, None]:
         assert folder is not None
         assert group is not None
 
@@ -609,7 +609,7 @@ class SourceScanner:
 
     def _source_paths_and_groups_to_analyze(self, source_patterns_to_analyze) -> List[PathData]:
         assert source_patterns_to_analyze is not None
-        result = []
+        result: List[PathData] = []
         # NOTE: We could avoid initializing `source_pattern_to_analyze` here by moving the `try` inside
         #  the loop, but this would incor a performance overhead (ruff's PERF203).
         source_pattern_to_analyze = None
@@ -911,7 +911,7 @@ def has_lexer(source_path: str) -> bool:
 
 def guess_lexer(source_path: str, text: str) -> pygments.lexer.Lexer:
     if is_plain_text(source_path):
-        result = pygount.lexers.PlainTextLexer()
+        result: pygments.lexer.Lexer = pygount.lexers.PlainTextLexer()
     else:
         try:
             result = pygments.lexers.guess_lexer_for_filename(source_path, text)
