@@ -60,7 +60,7 @@ def regex_from(pattern: Union[str, Pattern], is_shell_pattern=False) -> Pattern:
 
 
 def regexes_from(
-    patterns_text: Union[str, Sequence[str], Sequence[Pattern]],
+    patterns_text: Union[str, Sequence[str], Sequence[Pattern], None],
     default_patterns_text: Optional[Union[str, Sequence[Pattern], Sequence[str]]] = None,
     source: Optional[str] = None,
 ) -> List[Pattern]:

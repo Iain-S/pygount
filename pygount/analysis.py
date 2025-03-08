@@ -766,6 +766,7 @@ def _line_parts(lexer: pygments.lexer.Lexer, text: str) -> Iterator[Set[str]]:
 
 
 def check_file_handle_is_seekable(file_handle: Optional[Union[BufferedIOBase, RawIOBase]], source_path: str):
+    assert file_handle is not None
     if not file_handle.seekable():
         raise pygount.Error(f"cannot determine encoding: file handle must be seekable: {source_path}")
 

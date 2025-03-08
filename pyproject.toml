@@ -38,13 +38,13 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8, <3.13"  # NOTE We cannot use <4 because of coveralls.
+python = ">=3.9, <3.13"  # NOTE We cannot use <4 because of coveralls.
 pygments = "^2"
 chardet = "^5"
 rich = ">=9, <14"
 gitpython = "^3"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 coveralls = "^4"
 coverage = "^7"
 pytest = "^8"
@@ -53,12 +53,14 @@ pre-commit = "^3.5"  # TODO#158: Change to "^3".
 pur = "^7"
 ruff = "^0.5.1"
 twine = "^5"
+mypy = "^1.15.0"
 
 [tool.poetry.group.docs]
 optional = true
 
 [tool.poetry.group.docs.dependencies]
 Sphinx = "^7"
+
 
 [tool.poetry.scripts]
 pygount = "pygount.command:main"

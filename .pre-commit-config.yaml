@@ -33,3 +33,11 @@ repos:
     hooks:
       - id: no-commit-to-branch
         args: ["--branch", "main"]
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: MyPy
+        entry: poetry run mypy --install-types --non-interactive
+        language: system
+        types: [python]
