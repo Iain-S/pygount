@@ -159,3 +159,52 @@ def test_can_lex_notebook():
         (Token.Punctuation, "]}"),
         (Token.Text.Whitespace, "\n"),
     ]
+
+
+def test_can_lex_notebook_two():
+    lexer = pygount.lexers.JupyterLexer()
+    # The most minimal notebook allowed by
+    # https://github.com/jupyter/nbformat/blob/main/nbformat/v4/nbformat.v4.schema.json
+    text = "".join(
+        [
+            "{",
+            '    "metadata": {',
+            "    },",
+            '    "nbformat": 4,',
+            '    "nbformat_minor": 5,',
+            '    "cells": [',
+            "    ]",
+            "}",
+        ]
+    )
+    text_tokens = list(lexer.get_tokens(text))
+    assert text_tokens == [
+        (Token.Punctuation, "{"),
+        (Token.Text.Whitespace, "    "),
+        (Token.Name.Tag, '"metadata"'),
+        (Token.Punctuation, ":"),
+        (Token.Text.Whitespace, " "),
+        (Token.Punctuation, "{"),
+        (Token.Text.Whitespace, "    "),
+        (Token.Punctuation, "},"),
+        (Token.Text.Whitespace, "    "),
+        (Token.Name.Tag, '"nbformat"'),
+        (Token.Punctuation, ":"),
+        (Token.Text.Whitespace, " "),
+        (Token.Literal.Number.Integer, "4"),
+        (Token.Punctuation, ","),
+        (Token.Text.Whitespace, "    "),
+        (Token.Name.Tag, '"nbformat_minor"'),
+        (Token.Punctuation, ":"),
+        (Token.Text.Whitespace, " "),
+        (Token.Literal.Number.Integer, "5"),
+        (Token.Punctuation, ","),
+        (Token.Text.Whitespace, "    "),
+        (Token.Name.Tag, '"cells"'),
+        (Token.Punctuation, ":"),
+        (Token.Text.Whitespace, " "),
+        (Token.Punctuation, "["),
+        (Token.Text.Whitespace, "    "),
+        (Token.Punctuation, "]}"),
+        (Token.Text.Whitespace, "\n"),
+    ]

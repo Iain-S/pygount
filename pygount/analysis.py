@@ -15,6 +15,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from io import SEEK_CUR, BufferedIOBase, IOBase, RawIOBase, TextIOBase
+from pathlib import Path
 from typing import Iterator, List, Optional, Pattern, Sequence, Set, Tuple, Union
 
 import pygments.lexer
@@ -361,12 +362,16 @@ class SourceAnalysis:
         if result is None:
             assert lexer is not None
             assert source_code is not None
+            if isinstance(lexer, pygount.lexers.DynamicMixin):
+                lexer.peek(source_code)
+
             language = base_language(lexer.name) if merge_embedded_language else lexer.name
             if ("xml" in language.lower()) or (language == "Genshi"):
                 dialect = pygount.xmldialect.xml_dialect(source_path, source_code)
                 if dialect is not None:
                     language = dialect
             _log.info("%s: analyze as %s using encoding %s", source_path, language, encoding)
+            # code, docs, empty, string
             mark_to_count_map = {"c": 0, "d": 0, "e": 0, "s": 0}
             for line_parts in _line_parts(lexer, source_code):
                 mark_to_increment = "e"
@@ -740,9 +745,9 @@ def _pythonized_comments(tokens: Iterator[Tuple[TokenType, str]]) -> Iterator[To
 def _line_parts(lexer: pygments.lexer.Lexer, text: str) -> Iterator[Set[str]]:
     line_marks = set()
     tokens = _delined_tokens(lexer.get_tokens(text))
-    if lexer.name == "Python":
-        tokens = _pythonized_comments(tokens)
     language_id = lexer.name.lower()
+    if language_id == "python":
+        tokens = _pythonized_comments(tokens)
     white_text = " \f\n\r\t" + white_characters(language_id)
     white_words = white_code_words(language_id)
     for token_type, token_text in tokens:
@@ -906,6 +911,8 @@ def has_lexer(source_path: str) -> bool:
     if not result:
         suffix = os.path.splitext(os.path.basename(source_path))[1].lstrip(".")
         result = suffix in _SUFFIX_TO_FALLBACK_LEXER_MAP
+    if not result:
+        result = bool(pygments.lexers.guess_lexer(Path(source_path).read_text()))
     return result
 
 

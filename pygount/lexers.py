@@ -2,6 +2,9 @@
 Additional lexers for pygount that fill gaps left by :py:mod:`pygments`.
 """
 
+import json
+from itertools import chain
+
 # Copyright (c) 2016-2024, Thomas Aglassinger.
 # All rights reserved. Distributed under the BSD License.
 import pygments.lexer
@@ -70,10 +73,53 @@ class PlainTextLexer(pygments.lexer.RegexLexer):
     tokens = {"root": [(r"\s*\n", pygments.token.Text), (r".+\n", pygments.token.Comment.Single)]}
 
 
-class JupyterLexer(pygments.lexers.JsonLexer):
+class DynamicMixin:
+    """
+    Mixin class for lexers that need to see the text.
+    """
+
+    def peek(self, _text) -> None:
+        """Peek at the text."""
+        raise NotImplementedError
+
+
+class JupyterLexer(pygments.lexer.Lexer, DynamicMixin):
     """
     Jupyter notebooks are stored in JSON format.
     """
 
-    name = "Jupyter"
-    filenames = ["*.ipynb"]
+    def __init__(self):
+        self.language = None
+        super().__init__()
+
+    @property
+    def name(self) -> str:
+        """The name of the language used in the notebook."""
+        # It is an error to call this property before calling get_tokens.
+        assert self.language is not None
+        return self.language
+
+    def peek(self, text) -> None:
+        from pygments.lexers import get_lexer_by_name
+
+        self.json_dict = json.loads(text)
+        # should we do a["metadata"]["kernelspec"]["language"]?
+        self.language = "{}".format(self.json_dict["metadata"]["language_info"]["name"])
+        self.lexer = get_lexer_by_name(self.language)
+
+    def get_tokens(self, text, unfiltered=False):
+        """Use a lexer appropriate for the language of the notebook."""
+        from pygments.lexers.python import PythonLexer
+
+        code = ""
+        docs = ""
+        for cell in self.json_dict["cells"]:
+            source = "".join(cell["source"])
+            if cell["cell_type"] == "code":
+                code += source
+            elif cell["cell_type"] == "markdown":
+                docs += source
+
+        code_tokens = PythonLexer().get_tokens(code)
+        doc_tokens = PlainTextLexer().get_tokens(docs)
+        return chain(code_tokens, doc_tokens)
