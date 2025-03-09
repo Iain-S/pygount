@@ -99,17 +99,16 @@ class JupyterLexer(pygments.lexer.Lexer, DynamicMixin):
 
     def get_tokens(self, text, unfiltered=False):
         """Use a lexer appropriate for the language of the notebook."""
-        from pygments.lexers.python import PythonLexer
 
-        code = ""
-        docs = ""
+        code = []
+        docs = []
         for cell in self.json_dict["cells"]:
             source = "".join(cell["source"])
             if cell["cell_type"] == "code":
-                code += source
+                code.append(source)
             elif cell["cell_type"] == "markdown":
-                docs += source
+                docs.append(source)
 
-        code_tokens = PythonLexer().get_tokens(code)
-        doc_tokens = PlainTextLexer().get_tokens(docs)
+        code_tokens = self.lexer.get_tokens("".join(code)) if code else []
+        doc_tokens = PlainTextLexer().get_tokens("".join(docs)) if docs else []
         return chain(code_tokens, doc_tokens)

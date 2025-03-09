@@ -10,7 +10,6 @@ import unittest
 from io import BytesIO, StringIO
 from typing import List, Set
 
-import pygments.lexers
 import pytest
 from pygments import lexers, token
 
@@ -277,45 +276,86 @@ class FileAnalysisTest(TempFolderTest):
         with pytest.raises(PygountError, match=r".*file handle must be seekable.*"):
             analysis.SourceAnalysis.from_file("README.md", "test", file_handle=file_handle, encoding="chardet")
 
-    def test_can_analyse_python_inside_notebook(self):
-        test_jupyter_path = self.create_temp_file(
-            "some.ipynb",
-            ["<!DOCTYPE html>", "{% load i18n %}", '<html lang="{{ language_code }}" />'],
+    def test_python_inside_notebook(self):
+        test_notebook_path = self.create_temp_file(
+            "python.ipynb",
+            [
+                "{",
+                '    "metadata": {',
+                '        "language_info": {',
+                '            "name": "python"',
+                "        }",
+                "    },",
+                '    "cells": [',
+                "        {",
+                '            "cell_type": "code",',
+                '            "source": [',
+                '                "print(1)\\n",',
+                '                "# a comment\\n",',
+                '                "print(2)"',
+                "            ]",
+                "        },",
+                "        {",
+                '            "cell_type": "markdown",',
+                '            "source": [',
+                '                "some markdown"',
+                "            ]",
+                "        }",
+                "    ]",
+                "}",
+            ],
         )
-        from pathlib import Path
 
+        # Without merging languages.
         source_analysis = analysis.SourceAnalysis.from_file(
-            str(Path("tests/examples/notebook.ipynb")),
-            "test",
-            encoding="utf-8",
-            merge_embedded_language=True,
-            # test_jupyter_path, "test", encoding="utf-8", merge_embedded_language=True
-        )
-        assert source_analysis.language == "Jupyter"
-        assert source_analysis.code_count == 2
-        assert source_analysis.documentation_count == 2
-
-        source_analysis = analysis.SourceAnalysis.from_file(
-            str(Path("tests/examples/notebook.ipynb")),
-            "test",
-            encoding="utf-8",
-            merge_embedded_language=False,
-            # test_jupyter_path, "test", encoding="utf-8", merge_embedded_language=True
+            test_notebook_path, "test", encoding="utf-8", merge_embedded_language=False
         )
         assert source_analysis.language == "Jupyter+Python"
         assert source_analysis.code_count == 2
         assert source_analysis.documentation_count == 2
 
-    def test_can_analyse_python_inside_noteboo(self):
-        # import pygments
-        pygments.lexers.load_lexer_from_file("/Users/istenson/code/iain/pygount/pygount/mylexer.py", "JupyteLexer")
-        from pathlib import Path
-
+        # Merging languages.
         source_analysis = analysis.SourceAnalysis.from_file(
-            str(Path("tests/examples/notebook.ipyn")), "test", encoding="utf-8", merge_embedded_language=True
+            test_notebook_path,
+            "test",
+            encoding="utf-8",
+            merge_embedded_language=True,
         )
-        assert source_analysis.language.lower() == "python"
-        assert source_analysis.code_count == 3
+        assert source_analysis.language == "Jupyter"
+        assert source_analysis.code_count == 2
+        assert source_analysis.documentation_count == 2
+
+    def test_sql_inside_notebook(self):
+        # See, for example,
+        # https://github.com/MariaDB/mariadb_kernel/blob/master/notebooks/fosdem_tryout.ipynb
+        test_notebook_path = self.create_temp_file(
+            "sql.ipynb",
+            [
+                "{",
+                '    "metadata": {',
+                '        "language_info": {',
+                '            "name": "SQL"',
+                "        }",
+                "    },",
+                '    "cells": [',
+                "        {",
+                '            "cell_type": "code",',
+                '            "source": [',
+                '                "-- SQL example.\\n",',
+                '                "select *\\n",',
+                '                "from some_table;"',
+                "            ]",
+                "        }",
+                "    ]",
+                "}",
+            ],
+        )
+        source_analysis = analysis.SourceAnalysis.from_file(test_notebook_path, "test", encoding="utf-8")
+        assert source_analysis.language == "Jupyter+SQL"
+        assert source_analysis.code_count == 2
+        assert source_analysis.documentation_count == 1
+        assert source_analysis.empty_count == 0
+        assert source_analysis.string_count == 0
 
 
 def test_can_repr_source_analysis_from_file():
