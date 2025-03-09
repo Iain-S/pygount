@@ -15,7 +15,6 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from io import SEEK_CUR, BufferedIOBase, IOBase, RawIOBase, TextIOBase
-from pathlib import Path
 from typing import Iterator, List, Optional, Pattern, Sequence, Set, Tuple, Union
 
 import pygments.lexer
@@ -362,7 +361,7 @@ class SourceAnalysis:
         if result is None:
             assert lexer is not None
             assert source_code is not None
-            if isinstance(lexer, pygount.lexers.DynamicMixin):
+            if isinstance(lexer, pygount.lexers.DynamicLexerMixin):
                 lexer.peek(source_code)
 
             language = base_language(lexer.name) if merge_embedded_language else lexer.name
@@ -911,8 +910,6 @@ def has_lexer(source_path: str) -> bool:
     if not result:
         suffix = os.path.splitext(os.path.basename(source_path))[1].lstrip(".")
         result = suffix in _SUFFIX_TO_FALLBACK_LEXER_MAP
-    if not result:
-        result = bool(pygments.lexers.guess_lexer(Path(source_path).read_text()))
     return result
 
 

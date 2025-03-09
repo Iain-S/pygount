@@ -2,14 +2,12 @@
 Additional lexers for pygount that fill gaps left by :py:mod:`pygments`.
 """
 
+# Copyright (c) 2016-2024, Thomas Aglassinger.
+# All rights reserved. Distributed under the BSD License.
 import json
 from itertools import chain
 
-# Copyright (c) 2016-2024, Thomas Aglassinger.
-# All rights reserved. Distributed under the BSD License.
-import pygments.lexer
 import pygments.lexers
-import pygments.token
 import pygments.util
 
 
@@ -73,9 +71,12 @@ class PlainTextLexer(pygments.lexer.RegexLexer):
     tokens = {"root": [(r"\s*\n", pygments.token.Text), (r".+\n", pygments.token.Comment.Single)]}
 
 
-class DynamicMixin:
+class DynamicLexerMixin:
     """
     Mixin class for lexers that need to see the text.
+
+    For example, they may need to see the text to determine
+    the language(s) present, if the file extension is not enough.
     """
 
     def peek(self, _text) -> None:
@@ -83,22 +84,23 @@ class DynamicMixin:
         raise NotImplementedError
 
 
-class JupyterLexer(pygments.lexer.Lexer, DynamicMixin):
+class JupyterLexer(pygments.lexer.Lexer, DynamicLexerMixin):
     """
-    Jupyter notebooks are stored in JSON format.
+    Lexer for Jupyter notebooks.
+
+    Uses the notebook metadata to choose a language lexer for code cells
+    and treats markdown cells as documentation.
     """
 
     def peek(self, text) -> None:
         """Look at the text to determine the language."""
-        from pygments.lexers import get_lexer_by_name
-
         self.json_dict = json.loads(text)
-        # should we do a["metadata"]["kernelspec"]["language"]?
-        self.lexer = get_lexer_by_name(self.json_dict["metadata"]["language_info"]["name"])
+        self.lexer = pygments.lexers.get_lexer_by_name(self.json_dict["metadata"]["language_info"]["name"])
         self.name = f"Jupyter+{self.lexer.name}"
 
     def get_tokens(self, text, unfiltered=False):
         """Use a lexer appropriate for the language of the notebook."""
+        assert self.name is not None, "peek() must be called before get_tokens()"
 
         code = []
         docs = []
